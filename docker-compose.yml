@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  jarvis:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ~/.jarvis:/root/.jarvis
+      - ./src:/app/src
+    environment:
+      - PYTHONPATH=/app/src
+    depends_on:
+      - llama
+
+  llama:
+    image: ghcr.io/ggerganov/llama.cpp:latest
+    command: ["--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  chromadb:
+    image: chromadb/chroma:latest
+    ports:
+      - "8000:8000"
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: jarvis
+      POSTGRES_PASSWORD: jarvis
+      POSTGRES_DB: jarvis_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
